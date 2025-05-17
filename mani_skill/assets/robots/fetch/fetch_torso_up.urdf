@@ -37,12 +37,12 @@
       </geometry>
     </collision>
   </link>
-  <joint name="head_pan_joint" type="revolute">
+  <joint name="head_pan_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.053125 0 0.603001417713939"/>
     <parent link="torso_lift_link"/>
     <child link="head_pan_link"/>
     <axis xyz="0 0 1"/>
-    <limit effort="0.32" lower="-1.57" upper="1.57" velocity="1.57"/>
+    <limit effort="0.32"velocity="1.57"/>
   </joint>
   <link name="head_tilt_link">
     <inertial>
@@ -63,12 +63,12 @@
       </geometry>
     </collision>
   </link>
-  <joint name="head_tilt_joint" type="revolute">
+  <joint name="head_tilt_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.14253 0 0.057999"/>
     <parent link="head_pan_link"/>
     <child link="head_tilt_link"/>
     <axis xyz="0 1 0"/>
-    <limit effort="0.68" lower="-0.76" upper="1.45" velocity="1.57"/>
+    <limit effort="0.68"velocity="1.57"/>
   </joint>
   <link name="shoulder_pan_link">
     <inertial>
