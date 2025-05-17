@@ -1,4 +1,5 @@
 from typing import Dict
+from copy import deepcopy
 
 import numpy as np
 import sapien
@@ -68,6 +69,24 @@ def rotate_2d_vec_by_angle(vec, theta):
 def angle_distance(q0: sapien.Pose, q1: sapien.Pose):
     qd = (q0.inv() * q1).q
     return 2 * np.arctan2(np.linalg.norm(qd[1:]), qd[0]) / np.pi
+
+
+def angle_distance_simple(q0: np.ndarray, q1: np.ndarray):
+    """
+    Args:
+        q0: (4,) or (N, 4)
+        q1: (4,) or (N, 4)
+    Returns:
+        (1) or (N)
+    """
+    if len(q0.shape) == 2 and len(q1.shape) == 2:
+        assert q0.shape[1] == 4 and q1.shape[1] == 4, "q0, q1 mush be (N, 4)"
+        return 1 - np.clip(np.abs(np.einsum('ij, ij -> i', q0, q1)), a_min=0, a_max=1)
+    elif len(q0.shape) == 2 and q1.size == 4:
+        assert q0.shape[1] == 4 and q1.size == 4, "q0, q1 mush be (N, 4)"
+        return 1 - np.clip(np.abs(np.einsum('ij, j -> i', q0, q1)), a_min=0, a_max=1)
+    elif q0.size == 4 and q1.size == 4:
+        return 1 - np.clip(np.abs(q0 @ q1), a_min=0, a_max=1)
 
 
 def get_axis_aligned_bbox_for_articulation(art: physx.PhysxArticulation):
@@ -142,6 +161,25 @@ def transform_points(H: torch.Tensor, pts: torch.Tensor) -> torch.Tensor:
     )
 
 
+def homo_transfer(R: np.ndarray, T: np.ndarray):
+    """
+    R, T shape: [N, 3, 3], [N, 3]
+    or R, T shape: [3, 3], [3]
+    """
+    if len(R.shape) == 3:
+        assert R.shape[0] == T.shape[0] and R.shape[1:] == (3, 3) and T.shape[1:] == (3,)
+        H = np.zeros((R.shape[0], 4, 4))
+        H[:, :3, :3] = R
+        H[:, :3, 3] = T
+        H[:, 3, 3] = 1
+    elif len(R.shape) == 2:
+        assert R.shape == (3, 3) and T.shape == (3,)
+        H = np.eye(4)
+        H[:3, :3] = R
+        H[:3, 3] = T
+    return H
+
+
 def invert_transform(H: np.ndarray):
     assert H.shape[-2:] == (4, 4), H.shape
     H_inv = H.copy()
@@ -199,3 +237,12 @@ def rotate_vector(v, q):
     w = q[0]
     u = q[1:]
     return 2.0 * u.dot(v) * u + (w * w - u.dot(u)) * v + 2.0 * w * np.cross(u, v)
+
+
+def uvz2xyz(uvz, intrinsic):
+    intrinsic_inv = torch.linalg.inv(intrinsic)
+    zuzvz = deepcopy(uvz)
+    zuzvz[:, 0] *= zuzvz[:, 2]
+    zuzvz[:, 1] *= zuzvz[:, 2]
+    xyz = torch.matmul(intrinsic_inv, zuzvz.T).T
+    return xyz
